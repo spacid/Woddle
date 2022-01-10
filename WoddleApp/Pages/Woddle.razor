@@ -9,22 +9,22 @@
 else
 {
     <div id="container">
-    @foreach (var word in inputWords)
-    {
-        <div>
-            @foreach (var c in word.InputChars)
-            {
-                <div class="square @c.CharPosition">@c.Character</div>
-            }
+        @foreach (var word in inputWords)
+        {
+            <div>
+                @foreach (var c in word.InputChars)
+                {
+                    <div class="square @c.CharPosition">@c.Character</div>
+                }
 
-        </div>
-    }
+            </div>
+        }
     </div>
 
     <p>Aantal pogingen: @tries. Nog @(amountOfTries - tries) te gaan</p>
     @if (tries == amountOfTries)
     {
-        <p>Het woord is: @wordToFind</p>
+        <p>Het woord is: @wordToFind.Word</p>
     }
 }
 
@@ -36,7 +36,7 @@ else
     /// <summary>
     /// The word to guess.
     /// </summary>
-    public static string? wordToFind { get; set; }
+    public static GuessWord? wordToFind { get; set; }
     /// <summary>
     /// Length of the word to guess
     /// </summary>
@@ -76,26 +76,39 @@ else
         notused
     }
 
+    /// <summary>
+    /// Representation of the word to guess.
+    /// </summary>
+    public class GuessWord
+    {
+        public string Word { get; set; }
+        public IDictionary<char, int> Chars = new Dictionary<char, int>();
+
+        public GuessWord(string word)
+        {
+            Word = word;
+            foreach (var c in word)
+            {
+                if (!Chars.ContainsKey(c))
+                {
+                    Chars.Add(c, 1);
+                }
+                else
+                {
+                    Chars[c] += Chars[c] + 1;
+                }
+            }
+        }
+    }
+
     public class InputChar
     {
         public char Character { get; set; }
         public CharPositionCSS CharPosition { get; set; }
 
-        public InputChar(char character, int position, string word)
+        public InputChar(char character)
         {
             Character = character;
-            if (word[position] == character)
-            {
-                CharPosition = CharPositionCSS.correctplace;
-            }
-            else if (word.Contains(character))
-            {
-                CharPosition = CharPositionCSS.wrongplace;
-            }
-            else
-            {
-                CharPosition = CharPositionCSS.notused;
-            }
         }
     }
 
@@ -106,9 +119,41 @@ else
         public InputWord(string word)
         {
             int i = 0;
+            IDictionary<char, int> foundChars = new Dictionary<char, int>();
             foreach (char c in word)
             {
-                InputChars.Add(new InputChar(c, i, wordToFind));
+                InputChar inputChar = new InputChar(c);
+                // A character should be classified as being in the wrong spot
+                // only if that character still remains in the word. For example,
+                // the word to guess is "beast" and the player guesses "beret". The
+                // first 'e' is in the correct spot but the second 'e' should not be
+                // classified as in the wrong spot because there is no more 'e' in the
+                // word to guess. We use a Dictionary to count the remaining characters.
+                if (!foundChars.ContainsKey(c))
+                {
+                    foundChars.Add(c, 1);
+                }
+                else
+                {
+                    foundChars[c] += foundChars[c] + 1;
+                }
+
+                // Determine the classification of the character.
+                if (wordToFind.Word[i] == c)
+                {
+                    inputChar.CharPosition = CharPositionCSS.correctplace;
+                }
+                else if (wordToFind.Word.Contains(c) && foundChars[c] < wordToFind.Chars[c])
+                {
+                    inputChar.CharPosition = CharPositionCSS.wrongplace;
+                }
+                else
+                {
+                    inputChar.CharPosition = CharPositionCSS.notused;
+
+                }
+
+                InputChars.Add(inputChar);
                 i += 1;
             }
         }
@@ -119,10 +164,11 @@ else
     /// <param name="args">The input from the text field</param>
     private void AddWord(ChangeEventArgs args)
     {
-        if (tries < amountOfTries)
+        string inputWord = (string)args.Value;
+        if (tries < amountOfTries && inputWord.Length == wordLength)
         {
             //words.Add((string)args.Value);
-            inputWords.Add(new InputWord((string)args.Value));
+            inputWords.Add(new InputWord(inputWord));
             tries += 1;
         }
     }
@@ -140,7 +186,7 @@ else
     /// </summary>
     private void NewWord()
     {
-        wordToFind = GetRandomWord();
+        wordToFind = new GuessWord(GetRandomWord());
         inputWords = new List<InputWord>(5);
         tries = 0;
     }
