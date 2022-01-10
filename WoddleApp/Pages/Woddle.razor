@@ -8,21 +8,18 @@
 }
 else
 {
+    <div id="container">
     @foreach (var word in inputWords)
     {
-        <table class="table">
-            <tbody>
-                <tr height="200px">
-                    @foreach (var c in word.InputChars)
-                    {
-                        <td style="position:relative;">
-                            <div style="width: 100%; height: 100%; z-index: 0; background-color: @c.Color; position:absolute; top: 0; left: 0;">@c.Character</div>
-                        </td>
-                    }
-                </tr>
-            </tbody>
-        </table>
+        <div>
+            @foreach (var c in word.InputChars)
+            {
+                <div class="square @c.CharPosition">@c.Character</div>
+            }
+
+        </div>
     }
+    </div>
 
     <p>Aantal pogingen: @tries. Nog @(amountOfTries - tries) te gaan</p>
     @if (tries == amountOfTries)
@@ -72,37 +69,32 @@ else
         NewWord();
     }
 
-    private enum CharPosition
+    public enum CharPositionCSS
     {
-        RightPlace,
-        WrongPlace,
-        NotExisting
+        correctplace,
+        wrongplace,
+        notused
     }
 
     public class InputChar
     {
         public char Character { get; set; }
-        public string Color { get; set; }
-        private CharPosition CharPosition { get; set; }
+        public CharPositionCSS CharPosition { get; set; }
 
         public InputChar(char character, int position, string word)
         {
             Character = character;
             if (word[position] == character)
             {
-                CharPosition = CharPosition.RightPlace;
-                Color = "green";
+                CharPosition = CharPositionCSS.correctplace;
             }
             else if (word.Contains(character))
             {
-                CharPosition = CharPosition.WrongPlace;
-                Color = "yellow";
-
+                CharPosition = CharPositionCSS.wrongplace;
             }
             else
             {
-                CharPosition = CharPosition.NotExisting;
-                Color = "red";
+                CharPosition = CharPositionCSS.notused;
             }
         }
     }
