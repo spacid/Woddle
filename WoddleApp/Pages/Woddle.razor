@@ -23,7 +23,12 @@ else
             </tbody>
         </table>
     }
-    <p>@tries</p>
+
+    <p>Aantal pogingen: @tries. Nog @(amountOfTries - tries) te gaan</p>
+    @if (tries == amountOfTries)
+    {
+        <p>Het woord is: @wordToFind</p>
+    }
 }
 
 <input placeholder="Enter your text" @onchange="AddWord" />
