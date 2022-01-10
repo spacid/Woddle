@@ -1,0 +1,151 @@
+﻿@page "/"
+@inject HttpClient Http
+
+<h3>Woddle</h3>
+@if (wordToFind == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    @foreach (var word in inputWords)
+    {
+        <table class="table">
+            <tbody>
+                <tr height="200px">
+                    @foreach (var c in word.InputChars)
+                    {
+                        <td style="position:relative;">
+                            <div style="width: 100%; height: 100%; z-index: 0; background-color: @c.Color; position:absolute; top: 0; left: 0;">@c.Character</div>
+                        </td>
+                    }
+                </tr>
+            </tbody>
+        </table>
+    }
+    <p>@tries</p>
+}
+
+<input placeholder="Enter your text" @onchange="AddWord" />
+
+<button class="btn btn-primary" @onclick="NewWord">New word</button>
+
+@code {
+    /// <summary>
+    /// The word to guess.
+    /// </summary>
+    public static string? wordToFind { get; set; }
+    /// <summary>
+    /// Length of the word to guess
+    /// </summary>
+    public static int wordLength = 5;
+    /// <summary>
+    /// The word list containing all potentials words.
+    /// </summary>
+    private List<string> words = new List<string>();
+    /// <summary>
+    /// The words the player already guessed.
+    /// </summary>
+    private List<InputWord> inputWords = new List<InputWord>(amountOfTries);
+    /// <summary>
+    /// The amount of times the player can guess.
+    /// </summary>
+    private static int amountOfTries = 5;
+    /// <summary>
+    /// The amount of times the player already guessed.
+    /// </summary>
+    private int tries = 0;
+
+    /// <summary>
+    /// Reads the words from a text file and initializes a word to guess.
+    /// </summary>
+    /// <returns></returns>
+    protected override async Task OnInitializedAsync()
+    {
+        string result = await Http.GetStringAsync("sample-data/words.txt");
+        words = result.Split('\n').ToList();
+        NewWord();
+    }
+
+    private enum CharPosition
+    {
+        RightPlace,
+        WrongPlace,
+        NotExisting
+    }
+
+    public class InputChar
+    {
+        public char Character { get; set; }
+        public string Color { get; set; }
+        private CharPosition CharPosition { get; set; }
+
+        public InputChar(char character, int position, string word)
+        {
+            Character = character;
+            if (word[position] == character)
+            {
+                CharPosition = CharPosition.RightPlace;
+                Color = "green";
+            }
+            else if (word.Contains(character))
+            {
+                CharPosition = CharPosition.WrongPlace;
+                Color = "yellow";
+
+            }
+            else
+            {
+                CharPosition = CharPosition.NotExisting;
+                Color = "red";
+            }
+        }
+    }
+
+    public class InputWord
+    {
+        public List<InputChar> InputChars = new List<InputChar>(wordLength);
+
+        public InputWord(string word)
+        {
+            int i = 0;
+            foreach (char c in word)
+            {
+                InputChars.Add(new InputChar(c, i, wordToFind));
+                i += 1;
+            }
+        }
+    }
+    /// <summary>
+    /// Guess a given word
+    /// </summary>
+    /// <param name="args">The input from the text field</param>
+    private void AddWord(ChangeEventArgs args)
+    {
+        if (tries < amountOfTries)
+        {
+            //words.Add((string)args.Value);
+            inputWords.Add(new InputWord((string)args.Value));
+            tries += 1;
+        }
+    }
+    /// <summary>
+    /// Get a random word from the word list. This is the word to guess.
+    /// </summary>
+    /// <returns>The random word</returns>
+    private string GetRandomWord()
+    {
+        return words[new Random().Next(words.Count)];
+    }
+
+    /// <summary>
+    /// Reset the game.
+    /// </summary>
+    private void NewWord()
+    {
+        wordToFind = GetRandomWord();
+        inputWords = new List<InputWord>(5);
+        tries = 0;
+    }
+}
+
