@@ -22,9 +22,13 @@ else
     </div>
 
     <p>Aantal pogingen: @tries. Nog @(amountOfTries - tries) te gaan</p>
-    @if (tries == amountOfTries)
+    @if (gameState == GameState.Won)
     {
-        <p>Het woord is: @wordToFind.Word</p>
+        <p>Joepie gewonnen!</p>
+    }
+    else if (gameState == GameState.Lost)
+    {
+        <p>Verloren, jammer! Het woord is: @wordToFind.Word</p>
     }
 }
 
@@ -37,6 +41,10 @@ else
     /// The word to guess.
     /// </summary>
     public static GuessWord? wordToFind { get; set; }
+    /// <summary>
+    /// The state of the game.
+    /// </summary>
+    public static GameState gameState = GameState.Ongoing;
     /// <summary>
     /// Length of the word to guess
     /// </summary>
@@ -65,7 +73,7 @@ else
     protected override async Task OnInitializedAsync()
     {
         string result = await Http.GetStringAsync("sample-data/words.txt");
-        words = result.Split('\n').ToList();
+        words = result.Split('\n').Select(p => p.Trim()).ToList();
         NewWord();
     }
 
@@ -76,6 +84,12 @@ else
         notused
     }
 
+    public enum GameState
+    {
+        Ongoing,
+        Won,
+        Lost
+    }
     /// <summary>
     /// Representation of the word to guess.
     /// </summary>
@@ -165,11 +179,17 @@ else
     private void AddWord(ChangeEventArgs args)
     {
         string inputWord = (string)args.Value;
-        if (tries < amountOfTries && inputWord.Length == wordLength)
+        if (gameState == GameState.Ongoing && tries < amountOfTries && inputWord.Length == wordLength)
         {
-            //words.Add((string)args.Value);
             inputWords.Add(new InputWord(inputWord));
             tries += 1;
+            if (inputWord == wordToFind.Word)
+            {
+                gameState = GameState.Won;
+            }
+            else if (tries == amountOfTries) {
+                gameState = GameState.Lost;
+            }
         }
     }
     /// <summary>
@@ -189,6 +209,7 @@ else
         wordToFind = new GuessWord(GetRandomWord());
         inputWords = new List<InputWord>(5);
         tries = 0;
+        gameState = GameState.Ongoing;
     }
 }
 
