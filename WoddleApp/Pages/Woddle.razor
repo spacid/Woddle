@@ -12,7 +12,7 @@ else
         @foreach (var word in inputWords)
         {
             <div>
-                @foreach (var c in word.InputChars)
+                @foreach (var c in word)
                 {
                     <div class="square @c.CharPosition">@c.Character</div>
                 }
@@ -28,7 +28,7 @@ else
     }
     else if (gameState == GameState.Lost)
     {
-        <p>Verloren, jammer! Het woord is: @wordToFind.Word</p>
+        <p>Verloren, jammer! Het woord is: @wordToFind</p>
     }
 }
 
@@ -40,7 +40,7 @@ else
     /// <summary>
     /// The word to guess.
     /// </summary>
-    public static GuessWord? wordToFind { get; set; }
+    public static string? wordToFind { get; set; }
     /// <summary>
     /// The state of the game.
     /// </summary>
@@ -56,7 +56,7 @@ else
     /// <summary>
     /// The words the player already guessed.
     /// </summary>
-    private List<InputWord> inputWords = new List<InputWord>(amountOfTries);
+    private List<List<InputChar>> inputWords = new List<List<InputChar>>(amountOfTries);
     /// <summary>
     /// The amount of times the player can guess.
     /// </summary>
@@ -90,30 +90,6 @@ else
         Won,
         Lost
     }
-    /// <summary>
-    /// Representation of the word to guess.
-    /// </summary>
-    public class GuessWord
-    {
-        public string Word { get; set; }
-        public IDictionary<char, int> Chars = new Dictionary<char, int>();
-
-        public GuessWord(string word)
-        {
-            Word = word;
-            foreach (var c in word)
-            {
-                if (!Chars.ContainsKey(c))
-                {
-                    Chars.Add(c, 1);
-                }
-                else
-                {
-                    Chars[c] += Chars[c] + 1;
-                }
-            }
-        }
-    }
 
     public class InputChar
     {
@@ -126,54 +102,26 @@ else
         }
     }
 
-    public class InputWord
-    {
-        public List<InputChar> InputChars = new List<InputChar>(wordLength);
-
-        public InputWord(string word)
-        {
-            int i = 0;
-            IDictionary<char, int> foundChars = new Dictionary<char, int>();
-            foreach (char c in word)
-            {
-                InputChar inputChar = new InputChar(c);
-                // A character should be classified as being in the wrong spot
-                // only if that character still remains in the word. For example,
-                // the word to guess is "beast" and the player guesses "beret". The
-                // first 'e' is in the correct spot but the second 'e' should not be
-                // classified as in the wrong spot because there is no more 'e' in the
-                // word to guess. We use a Dictionary to count the remaining characters.
-                if (!foundChars.ContainsKey(c))
-                {
-                    foundChars.Add(c, 1);
-                }
-                else
-                {
-                    foundChars[c] += foundChars[c] + 1;
-                }
-
-                // Determine the classification of the character.
-                if (wordToFind.Word[i] == c)
-                {
-                    inputChar.CharPosition = CharPositionCSS.correctplace;
-                }
-                else if (wordToFind.Word.Contains(c) && foundChars[c] < wordToFind.Chars[c])
-                {
-                    inputChar.CharPosition = CharPositionCSS.wrongplace;
-                }
-                else
-                {
-                    inputChar.CharPosition = CharPositionCSS.notused;
-
-                }
-
-                InputChars.Add(inputChar);
-                i += 1;
-            }
-        }
-    }
     /// <summary>
-    /// Guess a given word
+    /// The input word will be compared to the word that needs to be guessed.
+    /// 
+    /// Guessing is a two-pass algorithm:
+    /// The first pass will check if the characters are in the exact spot.
+    /// The second pass is to determine the class of the characters not in the exact spot: wrong place or not used.
+    /// 
+    /// First, it loops over every character in the input word. Each character will be compared to the
+    /// character in the same location of the answer word:
+    ///  - If the characters match, the character will be marked "as in the exact same place".
+    ///  - If they don't match the character of the answer will be added to a List (notMatchedChars), which will be used
+    ///    in the second pass.
+    /// 
+    /// Secondly, we loop over every not-matched character of the input word again. If that character is contained in
+    /// the list with the not-matched characters of the answer word:
+    ///  - If so, the character is in the wrong place.
+    ///  - If not, the character is not used.
+    /// 
+    /// It is important to note that if a character is determined to be in the wrong place, it is removed from the list
+    /// with the non matched characters.
     /// </summary>
     /// <param name="args">The input from the text field</param>
     private void AddWord(ChangeEventArgs args)
@@ -181,13 +129,50 @@ else
         string inputWord = (string)args.Value;
         if (gameState == GameState.Ongoing && tries < amountOfTries && inputWord.Length == wordLength)
         {
-            inputWords.Add(new InputWord(inputWord));
+            int i = 0;
+            IList<char> notMatchedChars = new List<char>();
+            IList<int> unmappedIndexes = new List<int>();
+            List<InputChar> inputChars = new List<InputChar>(wordLength);
+            // First pass to determine the characters in the exact same spot as the answer word.
+            foreach (char c in inputWord)
+            {
+                InputChar inputChar = new InputChar(c);
+
+                if (wordToFind[i] == c)
+                {
+                    inputChar.CharPosition = CharPositionCSS.correctplace;
+                }
+                else
+                {
+                    unmappedIndexes.Add(i);
+                    notMatchedChars.Add(wordToFind[i]);
+                }
+
+                inputChars.Add(inputChar);
+                i += 1;
+            }
+            // Second pass to determine the class of the not-matched characters.
+            foreach (int idx in unmappedIndexes)
+            {
+                if (notMatchedChars.Contains(inputWord[idx]))
+                {
+                    inputChars[idx].CharPosition = CharPositionCSS.wrongplace;
+                    notMatchedChars.Remove(inputWord[idx]);
+                }
+                else
+                {
+                    inputChars[idx].CharPosition = CharPositionCSS.notused;
+                }
+            }
+            inputWords.Add(inputChars);
             tries += 1;
-            if (inputWord == wordToFind.Word)
+            // Check game state
+            if (unmappedIndexes.Count == 0)
             {
                 gameState = GameState.Won;
             }
-            else if (tries == amountOfTries) {
+            else if (tries == amountOfTries)
+            {
                 gameState = GameState.Lost;
             }
         }
@@ -206,8 +191,8 @@ else
     /// </summary>
     private void NewWord()
     {
-        wordToFind = new GuessWord(GetRandomWord());
-        inputWords = new List<InputWord>(5);
+        wordToFind = GetRandomWord();
+        inputWords = new List<List<InputChar>>(5);
         tries = 0;
         gameState = GameState.Ongoing;
     }
