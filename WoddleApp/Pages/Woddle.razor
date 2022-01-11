@@ -1,5 +1,6 @@
 ﻿@page "/"
 @inject HttpClient Http
+@inject IJSRuntime JSRuntime
 
 <h3>Woddle</h3>
 @if (wordToFind == null)
@@ -52,7 +53,7 @@ else
     /// <summary>
     /// The word list containing all potentials words.
     /// </summary>
-    private List<string> words = new List<string>();
+    private ISet<string> words = new HashSet<string>();
     /// <summary>
     /// The words the player already guessed.
     /// </summary>
@@ -73,7 +74,7 @@ else
     protected override async Task OnInitializedAsync()
     {
         string result = await Http.GetStringAsync("sample-data/words.txt");
-        words = result.Split('\n').Select(p => p.Trim()).ToList();
+        words = result.Split('\n').Select(p => p.Trim()).ToHashSet();
         NewWord();
     }
 
@@ -129,6 +130,11 @@ else
         string inputWord = ((string)args.Value).ToLower();
         if (gameState == GameState.Ongoing && tries < amountOfTries && inputWord.Length == wordLength)
         {
+            if (!words.Contains(inputWord))
+            {
+                JSRuntime.InvokeAsync<object>("alert", $"Het woord '{inputWord}' bevindt zich niet in het woordenboek.");
+                return;
+            }
             int i = 0;
             IList<char> notMatchedChars = new List<char>();
             IList<int> unmappedIndexes = new List<int>();
@@ -183,7 +189,7 @@ else
     /// <returns>The random word</returns>
     private string GetRandomWord()
     {
-        return words[new Random().Next(words.Count)];
+        return words.ElementAt(new Random().Next(words.Count));
     }
 
     /// <summary>
