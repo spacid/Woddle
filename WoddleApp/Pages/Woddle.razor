@@ -126,7 +126,7 @@ else
     /// <param name="args">The input from the text field</param>
     private void AddWord(ChangeEventArgs args)
     {
-        string inputWord = (string)args.Value;
+        string inputWord = ((string)args.Value).ToLower();
         if (gameState == GameState.Ongoing && tries < amountOfTries && inputWord.Length == wordLength)
         {
             int i = 0;
