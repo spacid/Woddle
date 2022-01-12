@@ -79,8 +79,15 @@ a, .btn-link {
     background: grey;
 }
 
-.default {
-    background: #ffff99;
+.absent {
+    background: #b2beb5;
+}
+
+#container input {
+    display: block;
+    margin-top: 4px;
+    margin-right: auto;
+    margin-left: auto;
 }
 
 .square {
