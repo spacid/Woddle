@@ -65,7 +65,7 @@ a, .btn-link {
 
 #container {
     margin: auto;
-    width: 23em;
+    width: 21.9em;
 }
 .correctplace {
     background: #6aaa64;
@@ -103,3 +103,18 @@ a, .btn-link {
     font-family: 'Lato', sans-serif;
     color: white;
 }
+.navbar-light .navbar-brand {
+    color: #b2beb5;
+}
+.button-icon-reload {
+    color: #b2beb5;
+    border-color: #b2beb5;
+}
+.button-icon-reload:hover {
+    color: #fff;
+    background-color: #b2beb5;
+    border-color: #b2beb5;
+}
+    .button-icon-reload:focus {
+        box-shadow: 0 0 0 .25rem rgba(178,190,181, 0.25);
+    }
