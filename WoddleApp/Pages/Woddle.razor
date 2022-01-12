@@ -3,26 +3,25 @@
 @inject IJSRuntime JSRuntime
 
 <h3>Woddle</h3>
+<button class="btn btn-primary" @onclick="NewWord">Nieuw woord</button>
+
+ <div id="container">
 @if (wordToFind == null)
 {
     <p><em>Loading...</em></p>
 }
 else
 {
-    <div id="container">
-        @foreach (var word in inputWords)
-        {
-            <div>
-                @foreach (var c in word)
-                {
-                    <div class="square @c.CharPosition">@c.Character</div>
-                }
+    @for (int i = 0; i < amountOfTries; i++)
+    {
+        <div>
+            @for (int j = 0; j < wordLength; j++)
+            {
+                <div class="square @grid.Words[i,j].CharPosition">@grid.Words[i,j].Character</div>
+            }
+        </div>
+    }
 
-            </div>
-        }
-    </div>
-
-    <p>Aantal pogingen: @tries. Nog @(amountOfTries - tries) te gaan</p>
     @if (gameState == GameState.Won)
     {
         <p>Joepie gewonnen!</p>
@@ -33,9 +32,8 @@ else
     }
 }
 
-<input placeholder="Enter your text" @onchange="AddWord" />
-
-<button class="btn btn-primary" @onclick="NewWord">New word</button>
+<input placeholder="Vul woord in" @onchange="AddWord" />
+</div>
 
 @code {
     /// <summary>
@@ -57,7 +55,7 @@ else
     /// <summary>
     /// The words the player already guessed.
     /// </summary>
-    private List<List<InputChar>> inputWords = new List<List<InputChar>>(amountOfTries);
+    private GameGrid grid = new GameGrid();
     /// <summary>
     /// The amount of times the player can guess.
     /// </summary>
@@ -82,7 +80,8 @@ else
     {
         correctplace,
         wrongplace,
-        notused
+        notused,
+        absent
     }
 
     public enum GameState
@@ -97,12 +96,26 @@ else
         public char Character { get; set; }
         public CharPositionCSS CharPosition { get; set; }
 
-        public InputChar(char character)
+        public InputChar()
         {
-            Character = character;
+            CharPosition = CharPositionCSS.absent;
         }
     }
 
+    public class GameGrid
+    {
+        public InputChar[,] Words = new InputChar[amountOfTries, wordLength];
+
+        public GameGrid()
+        {
+            foreach (int i in Enumerable.Range(0, amountOfTries)) {
+                foreach (int j in Enumerable.Range(0, wordLength))
+                {
+                    Words[i,j] = new InputChar();
+                }
+            } 
+        }
+    }
     /// <summary>
     /// The input word will be compared to the word that needs to be guessed.
     /// 
@@ -138,12 +151,11 @@ else
             int i = 0;
             IList<char> notMatchedChars = new List<char>();
             IList<int> unmappedIndexes = new List<int>();
-            List<InputChar> inputChars = new List<InputChar>(wordLength);
             // First pass to determine the characters in the exact same spot as the answer word.
             foreach (char c in inputWord)
             {
-                InputChar inputChar = new InputChar(c);
-
+                InputChar inputChar = grid.Words[tries, i];
+                inputChar.Character = c;
                 if (wordToFind[i] == c)
                 {
                     inputChar.CharPosition = CharPositionCSS.correctplace;
@@ -153,8 +165,6 @@ else
                     unmappedIndexes.Add(i);
                     notMatchedChars.Add(wordToFind[i]);
                 }
-
-                inputChars.Add(inputChar);
                 i += 1;
             }
             // Second pass to determine the class of the not-matched characters.
@@ -162,15 +172,14 @@ else
             {
                 if (notMatchedChars.Contains(inputWord[idx]))
                 {
-                    inputChars[idx].CharPosition = CharPositionCSS.wrongplace;
+                    grid.Words[tries, idx].CharPosition = CharPositionCSS.wrongplace;
                     notMatchedChars.Remove(inputWord[idx]);
                 }
                 else
                 {
-                    inputChars[idx].CharPosition = CharPositionCSS.notused;
+                    grid.Words[tries, idx].CharPosition = CharPositionCSS.notused;
                 }
             }
-            inputWords.Add(inputChars);
             tries += 1;
             // Check game state
             if (unmappedIndexes.Count == 0)
@@ -198,7 +207,7 @@ else
     private void NewWord()
     {
         wordToFind = GetRandomWord();
-        inputWords = new List<List<InputChar>>(5);
+        grid = new GameGrid();
         tries = 0;
         gameState = GameState.Ongoing;
     }
